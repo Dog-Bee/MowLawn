@@ -73,9 +73,12 @@ Shader "Unlit/GrassShader"
 
                 float y = IN.positionOS.y;
                 float normY = saturate((y-_MinY)/(_MaxY-_MinY));
+                float3 worldPos = TransformObjectToWorld(IN.positionOS).xyz;
 
-                float windOffset = sin(_Time.y * _WindFrequency+IN.positionOS.x*2+IN.positionOS.z*2);
+                float windOffset = sin(_Time.y * _WindFrequency+worldPos.x*1.5+worldPos.z*1.5)+cos(worldPos.x*0.7+_Time.y*0.5)*0.5;
+                
                 IN.positionOS.x += windOffset*_WindSpeed*normY;
+                
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS);
                 OUT.height = normY;
                 return OUT;
