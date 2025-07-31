@@ -2,12 +2,21 @@ Shader "Unlit/GrassShader"
 {
     Properties
     {
-        _BaseColor("Base Color", Color) = (0.2,1,0.2,1)
+        _TopColor("Top Color", Color) = (0.2,1,0.2,1)
+        _MidColor("Mid Color", Color) = (0.2,1,0.2,1)
+        _BotColor("Bot Color", Color) = (0.2,1,0.2,1)
+        
+        _MinY ("Min Y (gradient)", Range(0,1)) = 0
+        _MaxY ("Max Y (gradient)", Range(0,1)) = 1
+        
+        
+        _WindSpeed("Wind Speed", Float) = 0.1
+        _WindFrequency("Wind Frequency", Float) = 2
+        
         _ColorMap("ColorMap",2D) = "white"{}
         _CutMask("Cut Mask",2D) = "black"{}
         _GrassHeight("Grass Height", Float) = 0.3
-        _WindSpeed("Wind Speed", Float) = 1.0
-        _WindStrength("Wind Strength", Float) = 0.1
+        
     }
     SubShader
     {
@@ -25,70 +34,61 @@ Shader "Unlit/GrassShader"
             }
 
             HLSLPROGRAM
+            
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma instancing_options assumeuniformscaling
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
             {
-                float4 positionOS :POSITION;
-                float2 uv :TEXCOORD0;
-                float3 normalOS :NORMAL;
+                float4 positionOS : POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
-                float4 positionOS :SV_POSITION;
-                float2 uv :TEXCOORD0;
-                float3 worldNormal :TEXCOORD1;
-                float3 worldPos :TEXCOORD2;
+                float4 positionHCS : SV_POSITION;
+                float height : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+
             };
 
-            
-            sampler2D _ColorMap;
-            sampler2D _CutMask;
+            float4 _TopColor;
+            float4 _MidColor;
+            float4 _BotColor;
 
-            float _GrassHeight;
             float _WindSpeed;
-            float _WindStrength;
-            float4 _BaseColor;
-
-            float4x4 _ObjectToWorld;
-            float4x4 _WorldToObject;
+            float _WindFrequency;
+            float _MinY;
+            float _MaxY;
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN,OUT);
 
-                float2 uv = IN.uv;
+                float y = IN.positionOS.y;
+                float normY = saturate((y-_MinY)/(_MaxY-_MinY));
 
-                float cutValue = tex2Dlod(_CutMask, float4(uv, 0, 0)).r;
-                float heightFactor = saturate(1.0 - cutValue);
-
-                float wave = sin(uv.x * 4.0 + _Time.y * _WindSpeed) + cos(uv.y * 4.0 + _Time.y * _WindSpeed);
-
-                wave *= 0.5 * _WindStrength;
-
-
-                float3 displacedPos = IN.positionOS.xyz;
-                displacedPos.y = heightFactor*_GrassHeight+wave;
-                
-                float3 worldPos = mul(_ObjectToWorld, float4(displacedPos,1)).xyz;
-
-                OUT.positionOS = TransformWorldToHClip(worldPos);
-                OUT.uv = uv;
-                OUT.worldNormal = normalize(mul((float3x3)_ObjectToWorld, IN.normalOS));
-                OUT.worldPos = worldPos;
-
+                float windOffset = sin(_Time.y * _WindFrequency+IN.positionOS.x*2+IN.positionOS.z*2);
+                IN.positionOS.x += windOffset*_WindSpeed*normY;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS);
+                OUT.height = normY;
                 return OUT;
             }
 
-            float4 frag(Varyings IN):SV_Target
+            float4 frag(Varyings IN) :SV_Target
             {
-                float4 texColor = tex2D(_ColorMap, IN.uv);
-                float4 color = texColor * _BaseColor;
-                return color;
-            }
+                float h = IN.height;
+                float4 col = h<0.5? lerp(_BotColor,_MidColor,h*2):lerp(_MidColor,_TopColor,(h-0.5)*2);
+                return col;
+                
+            }            
+           
             ENDHLSL
         }
     }

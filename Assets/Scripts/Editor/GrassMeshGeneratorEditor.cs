@@ -13,6 +13,8 @@ public class GrassMeshGeneratorEditor : EditorWindow
     private float _angleSpread = 20f;
     private Material _grassMaterial;
 
+    private Mesh _currentMesh;
+
 
     [MenuItem("Tools/Generators/Grass Mesh Generator")]
     private static void ShowWindow()
@@ -45,6 +47,24 @@ public class GrassMeshGeneratorEditor : EditorWindow
         {
             GenerateMesh();
         }
+
+        if (GUILayout.Button("Save Mesh"))
+        {
+            SaveMesh();
+        }
+    }
+
+    private void SaveMesh()
+    {
+        string path = EditorUtility.SaveFilePanelInProject("Save generated mesh", "GrassMesh", "Asset",
+            "Specify where to save generated mesh");
+        
+        if (!string.IsNullOrEmpty(path))
+        {
+            AssetDatabase.CreateAsset(_currentMesh, path);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Mesh saved to {path}");
+        } 
     }
 
 
@@ -54,11 +74,13 @@ public class GrassMeshGeneratorEditor : EditorWindow
         var filter = grassGO.AddComponent<MeshFilter>();
         var renderer = grassGO.AddComponent<MeshRenderer>();
         
+        Vector3 clusterCenter = new Vector3(_gridSize*.5f, 0, _gridSize*.5f);
+        
         if(_grassMaterial != null)
             renderer.sharedMaterial = _grassMaterial;
         
-        Mesh mesh = new Mesh();
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        _currentMesh = new Mesh();
+        _currentMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         
         int totalGrass = _densityPerCell * _gridSize * _gridSize*_bladesPerPoint;
         Vector3[] vertices = new Vector3[totalGrass * 3];
@@ -74,7 +96,7 @@ public class GrassMeshGeneratorEditor : EditorWindow
             {
                 for (int i = 0; i < _densityPerCell; i++)
                 {
-                    Vector3 pos = new Vector3(gx+Random.value,0,gz+Random.value);
+                    Vector3 pos = new Vector3(gx+Random.value,0,gz+Random.value)-clusterCenter;
 
                     for (int j = 0; j < _bladesPerPoint; j++)
                     {
@@ -108,25 +130,18 @@ public class GrassMeshGeneratorEditor : EditorWindow
             }
         }
         
-        mesh.vertices = vertices;
-        mesh.uv = uvs;
-        mesh.triangles = triangles;
-        mesh.RecalculateNormals();
-        mesh.name = "GeneratedGrassMesh";
+        _currentMesh.vertices = vertices;
+        _currentMesh.uv = uvs;
+        _currentMesh.triangles = triangles;
+        _currentMesh.RecalculateNormals();
+        _currentMesh.name = "GeneratedGrassMesh";
         
-        filter.sharedMesh = mesh;
+        filter.sharedMesh = _currentMesh;
         
         Undo.RegisterCreatedObjectUndo(grassGO, "Create Grass Mesh");
         Selection.activeGameObject = grassGO;
 
-        string path = EditorUtility.SaveFilePanelInProject("Save generated mesh", "GrassMesh", "Asset",
-            "Specify where to save generated mesh");
-        if (!string.IsNullOrEmpty(path))
-        {
-            AssetDatabase.CreateAsset(mesh, path);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"Mesh saved to {path}");
-        }
+       
 
     }
 }
