@@ -12,8 +12,10 @@ public class GrassInstanceDrawer : MonoBehaviour
     [SerializeField] private Material grassMaterial;
     [SerializeField] private int instanceCount = 1000;
 
-    [Header("Surface Settings")] [SerializeField]
-    private MeshFilter surfaceMesh;
+    [Header("Surface Settings")] 
+    [SerializeField] private MeshFilter surfaceMesh;
+
+    [SerializeField] private float pixelPerUnit = 100f;
 
     private List<Matrix4x4> _matrices = new List<Matrix4x4>(1023);
     private const int BATCH_SIZE = 1023;
@@ -29,10 +31,14 @@ public class GrassInstanceDrawer : MonoBehaviour
     
     private Vector3 _surfaceOrigin;
 
+    private Material _runtimeMaterial;
+    private RenderTexture _cutMask;
+
 
     private void Start()
     {
         SurfaceCalculations();
+        CreateMaterialAndMask();
         GenerateInstances();
     }
 
@@ -70,6 +76,28 @@ public class GrassInstanceDrawer : MonoBehaviour
 
     }
 
+    private void CreateMaterialAndMask()
+    {
+        _runtimeMaterial = new Material(grassMaterial);
+        int textureWidth = Mathf.CeilToInt(_surfaceWidth * pixelPerUnit);
+        int textureHeight = Mathf.CeilToInt(_surfaceLength * pixelPerUnit);
+        
+        _cutMask = new RenderTexture(textureWidth, textureHeight, 0, RenderTextureFormat.R8);
+        _cutMask.enableRandomWrite = true;
+        _cutMask.Create();
+        
+        _runtimeMaterial.SetTexture("_CutMask", _cutMask);
+        
+        Vector2 tiling = new Vector2(1/_surfaceWidth, 1/_surfaceLength);
+        _runtimeMaterial.SetVector("_CutMaskTiling",tiling);
+        
+    }
+
+    private void CreateCutterMaterial()
+    {
+        
+    }
+
     private void GenerateInstances()
     {
         _matrices.Clear();
@@ -90,4 +118,5 @@ public class GrassInstanceDrawer : MonoBehaviour
 
         Debug.Log($"Generated {_matrices.Count} grass over {_surfaceWidth}x{_surfaceLength}");
     }
+    
 }

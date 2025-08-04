@@ -2,21 +2,38 @@ Shader "Unlit/GrassShader"
 {
     Properties
     {
+        [Header(Colors)]
         _TopColor("Top Color", Color) = (0.2,1,0.2,1)
         _MidColor("Mid Color", Color) = (0.2,1,0.2,1)
         _BotColor("Bot Color", Color) = (0.2,1,0.2,1)
-        
-        _MinY ("Min Y (gradient)", Range(0,1)) = 0
-        _MaxY ("Max Y (gradient)", Range(0,1)) = 1
-        
-        
-        _WindSpeed("Wind Speed", Float) = 0.1
+
+        [Space(10)]
+        [Header(Color Gradient Range)]
+        [Space(10)]
+        _MidColorBorder ("Middle Color Broder", Range(0,1)) = 0
+        _TopColorBorder ("Top Color Border", Range(0,1)) = 1
+        _ColorVariation ("Color Height Variation", Range(0,0.5)) = 0.1
+
+        [Space(10)]
+        [Header(Wind Settins)]
+        [Space(10)]
+        _WindSpeed("Wind Speed", Range(0,1)) = 0.1
         _WindFrequency("Wind Frequency", Float) = 2
-        
-        _ColorMap("ColorMap",2D) = "white"{}
+
+        [Space(10)]
+        [Header(Noise Settings)]
+        [Space(10)]
+        _NoiseAmount("Noise Amount", Range(0,1)) = 0.05
+        _NoiseFrequency("NoiseFrequency",Float) = 2
+
+        [Space(10)]
+        [Header(Cut Mask Settings)]
+        [Space(10)]
         _CutMask("Cut Mask",2D) = "black"{}
-        _GrassHeight("Grass Height", Float) = 0.3
-        
+        _CutThreshold("Cut Threshold", Range(0,1)) = 0.5
+        _CutMaskTiling("Cut Mask Tiling", Vector) = (1,1,0,0)
+        _CutMaskOffset("Cut Mask Offset", Vector) = (0,0,0,0)
+
     }
     SubShader
     {
@@ -34,12 +51,11 @@ Shader "Unlit/GrassShader"
             }
 
             HLSLPROGRAM
-            
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
             #pragma instancing_options assumeuniformscaling
-            
+
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
@@ -52,51 +68,108 @@ Shader "Unlit/GrassShader"
             {
                 float4 positionHCS : SV_POSITION;
                 float height : TEXCOORD0;
+                float randomTop : TEXCOORD1;
+                float2 worldUV : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
-
             };
 
             float4 _TopColor;
             float4 _MidColor;
             float4 _BotColor;
-
+            float _MidColorBorder;
+            float _TopColorBorder;
+            float _ColorVariation;
+            
             float _WindSpeed;
             float _WindFrequency;
-            float _MinY;
-            float _MaxY;
+
+            float _NoiseAmount;
+            float _NoiseFrequency;
+            
+            float _WindMinY;
+            float _WindMaxY;
+
+            TEXTURE2D(_CutMask);
+            SAMPLER(sampler_CutMask);
+            float _CutThreshold;
+            float2 _CutMaskTiling;
+            float2 _CutMaskOffset;
+            
+            
+
+            float hash21(float2 p)
+            {
+                p = frac(p * float2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return frac(p.x * p.y);
+            }
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
                 UNITY_SETUP_INSTANCE_ID(IN);
-                UNITY_TRANSFER_INSTANCE_ID(IN,OUT);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
                 float y = IN.positionOS.y;
-                float normY = saturate((y-_MinY)/(_MaxY-_MinY));
-                float3 worldPos = TransformObjectToWorld(IN.positionOS).xyz;
+                float colorNormY = saturate((y - _MidColorBorder) / (_TopColorBorder - _MidColorBorder));
+                float windNormY = saturate(y);
 
-                float baseWind = sin(_Time.y * _WindFrequency+worldPos.x*1.5+worldPos.z*1.5);
+                float3 worldPos = TransformObjectToWorld(IN.positionOS.xyz);
+                float2 uv = worldPos.xz * 0.5;
+                OUT.worldUV = worldPos.xz;
 
-                float randomOffset = sin(worldPos.x *0.8 +_Time.y *1.3)*0.3 + cos(worldPos.z*0.6 + _Time.y *1.7)*0.3;
-                float finalWind = (baseWind+randomOffset) *_WindSpeed *normY;
+                //---GLOBAL WIND---
+                float wave = sin(_Time.y * _WindFrequency + worldPos.x * 0.5f + worldPos.z * 0.5);
+                float globalWindOffset = wave * _WindSpeed * windNormY;
 
-                float3 windOffset = float3(finalWind*0.7,0,finalWind*0.3);
+                //---NOISE---
+                float phase = hash21(uv);
+                float amp = hash21(uv + 10);
+                float windNoise = sin(_Time.y * _NoiseFrequency + phase * 6.2831);
+                float noiseOffset = windNoise * (_NoiseAmount + amp * 0.05) * windNormY;
+
+                float angle = hash21(uv + 23.17) * 6.2831;
+                float2 dir = float2(cos(angle), sin(angle));
+
+                //---RANDOM---
+                float topRand = (hash21(uv+87.42)*2.0-1.0)*_ColorVariation;
+                OUT.randomTop = saturate(_TopColorBorder+topRand);
+
+                float2 totalOffset = dir * (globalWindOffset + noiseOffset);
+
                 
-                IN.positionOS.x += windOffset;
-                
-                OUT.positionHCS = TransformObjectToHClip(IN.positionOS);
-                OUT.height = normY;
+
+                IN.positionOS.xz += totalOffset;
+
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                OUT.height = colorNormY;
                 return OUT;
             }
 
             float4 frag(Varyings IN) :SV_Target
             {
-                float h = IN.height;
-                float4 col = h<0.5? lerp(_BotColor,_MidColor,h*2):lerp(_MidColor,_TopColor,(h-0.5)*2);
-                return col;
+                float cutUV = IN.worldUV*_CutMaskTiling + _CutMaskOffset;
+                float mask = SAMPLE_TEXTURE2D(_CutMask,sampler_CutMask,cutUV).r;
+                clip(mask-_CutThreshold);
+
                 
-            }            
-           
+                float h = IN.height;
+                float mid = _MidColorBorder;
+                float top = IN.randomTop;
+                                
+                float4 col;
+
+                if(h<mid)
+                {
+                    col = lerp(_BotColor,_MidColor,h/max(mid,0.001));
+                }
+                else
+                {
+                    col = lerp(_MidColor,_TopColor,(h-mid)/max(top-mid,0.001));
+                }
+
+                return col;
+            }
             ENDHLSL
         }
     }
