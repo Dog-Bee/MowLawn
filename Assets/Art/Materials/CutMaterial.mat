@@ -7,16 +7,15 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: New Material 1
-  m_Shader: {fileID: 4800000, guid: 1714793cf8c5ef644be237cd6fd66105, type: 3}
+  m_Name: CutMaterial
+  m_Shader: {fileID: 4800000, guid: 271c744328edeb249b90cc7b07f49d97, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _SPECULAR_SETUP
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
-  m_DoubleSidedGI: 1
+  m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
@@ -29,14 +28,6 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _ColorMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _CutMask:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -94,14 +85,10 @@ Material:
     - _AlphaToMask: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
-    - _BotColorBorder: 0.014
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorVariation: 0.399
-    - _Cull: 0
-    - _CutMinHeight: 0.672
-    - _CutThreshold: 0.5
+    - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
@@ -111,13 +98,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _GrassHeight: 0.3
-    - _MaxY: 0.343
     - _Metallic: 0
-    - _MidColorBorder: 0.126
-    - _MinY: 0.079
-    - _NoiseAmount: 0.099
-    - _NoiseFrequency: 0.3
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
@@ -128,26 +109,15 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _TopColorBorder: 0.605
-    - _WindFrequency: 1.39
-    - _WindMaxY: 0.977
-    - _WindMinY: 0.699
-    - _WindSpeed: 0
-    - _WindWaveFadeSped: 0
-    - _WorkflowMode: 0
+    - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.2783019, g: 1, b: 0.35371888, a: 1}
-    - _BotColor: {r: 0.051397298, g: 0.1981132, b: 0.1843767, a: 1}
-    - _Color: {r: 0.27830186, g: 1, b: 0.35371885, a: 1}
-    - _CutMaskOffset: {r: 0, g: 0.1, b: 0, a: 0}
-    - _CutMaskTiling: {r: 1, g: 1, b: 0, a: 0}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _MidColor: {r: 0.24510503, g: 0.6415094, b: 0.24510503, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _TopColor: {r: 0.73861265, g: 1, b: 0, a: 1}
   m_BuildTextureStacks: []
---- !u!114 &1765850775080709882
+--- !u!114 &1369316122917242358
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}

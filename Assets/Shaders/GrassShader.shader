@@ -31,8 +31,7 @@ Shader "Unlit/GrassShader"
         [Space(10)]
         _CutMask("Cut Mask",2D) = "black"{}
         _CutThreshold("Cut Threshold", Range(0,1)) = 0.5
-        _CutMaskTiling("Cut Mask Tiling", Vector) = (1,1,0,0)
-        _CutMaskOffset("Cut Mask Offset", Vector) = (0,0,0,0)
+        
 
     }
     SubShader
@@ -70,6 +69,7 @@ Shader "Unlit/GrassShader"
                 float height : TEXCOORD0;
                 float randomTop : TEXCOORD1;
                 float2 worldUV : TEXCOORD2;
+                float3 worldPos : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -89,11 +89,16 @@ Shader "Unlit/GrassShader"
             float _WindMinY;
             float _WindMaxY;
 
+            float _SurfaceOriginX;
+            float _SurfaceOriginZ;
+            float _SurfaceWidth;
+            float _SurfaceLength;
+
             TEXTURE2D(_CutMask);
             SAMPLER(sampler_CutMask);
+            
             float _CutThreshold;
             float2 _CutMaskTiling;
-            float2 _CutMaskOffset;
             
             
 
@@ -115,8 +120,12 @@ Shader "Unlit/GrassShader"
                 float windNormY = saturate(y);
 
                 float3 worldPos = TransformObjectToWorld(IN.positionOS.xyz);
-                float2 uv = worldPos.xz * 0.5;
+                
+                OUT.worldPos = worldPos;
                 OUT.worldUV = worldPos.xz;
+
+                float2 uv = worldPos.xz * 0.5;
+                
 
                 //---GLOBAL WIND---
                 float wave = sin(_Time.y * _WindFrequency + worldPos.x * 0.5f + worldPos.z * 0.5);
@@ -148,7 +157,13 @@ Shader "Unlit/GrassShader"
 
             float4 frag(Varyings IN) :SV_Target
             {
-                float cutUV = IN.worldUV*_CutMaskTiling + _CutMaskOffset;
+                float2 uv;
+                uv.x = (IN.worldUV.x-_SurfaceOriginX)/_SurfaceWidth;
+                uv.y = (IN.worldUV.y-_SurfaceOriginZ)/_SurfaceLength;
+                uv = clamp(uv,0,1);
+                
+                
+                float2 cutUV = uv;
                 float mask = SAMPLE_TEXTURE2D(_CutMask,sampler_CutMask,cutUV).r;
                 clip(mask-_CutThreshold);
 

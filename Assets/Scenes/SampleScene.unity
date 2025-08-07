@@ -123,54 +123,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &238064298
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 238064300}
-  - component: {fileID: 238064299}
-  m_Layer: 0
-  m_Name: GrassInstanceDrawer
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &238064299
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 238064298}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 74fc0abc2f14c184b929a975f38bc1d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  grassMesh: {fileID: 4300000, guid: 90132ce4337043e4fafea37b7e55127f, type: 2}
-  grassMaterial: {fileID: 2100000, guid: c283346b2acdf524f8b25a7f12fafa9c, type: 2}
-  instanceCount: 400
-  surfaceMesh: {fileID: 657585794}
---- !u!4 &238064300
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 238064298}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!43 &308927875
 Mesh:
   m_ObjectHideFlags: 0
@@ -348,7 +300,8 @@ GameObject:
   - component: {fileID: 657585794}
   - component: {fileID: 657585793}
   - component: {fileID: 657585792}
-  m_Layer: 0
+  - component: {fileID: 657585796}
+  m_Layer: 3
   m_Name: GrassPlane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -437,6 +390,73 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -2.08, y: 0, z: 0.36}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &657585796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 657585791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74fc0abc2f14c184b929a975f38bc1d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grassMesh: {fileID: 4300000, guid: 90132ce4337043e4fafea37b7e55127f, type: 2}
+  grassMaterial: {fileID: 2100000, guid: c283346b2acdf524f8b25a7f12fafa9c, type: 2}
+  cutterMaterial: {fileID: 2100000, guid: 65b9eb58254d0fd40a00f06e4e6946b4, type: 2}
+  instanceCount: 400
+  surfaceMesh: {fileID: 657585794}
+  pixelPerUnit: 100
+  _cutMask: {fileID: 0}
+--- !u!1 &1078741817
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1078741819}
+  - component: {fileID: 1078741818}
+  m_Layer: 0
+  m_Name: MouseCutter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1078741818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1078741817}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 707e4e9b0a70ad34b9413e48f177bc76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  radius: 0.1
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 8
+--- !u!4 &1078741819
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1078741817}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -717,8 +737,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1627109546}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.24439767, y: -0.0014542222, z: 0.00036703685, w: 0.96967393}
-  m_LocalPosition: {x: -2.3091755, y: 2.3540983, z: -5.994}
+  m_LocalRotation: {x: 0.7071068, y: -0, z: 1.7462302e-10, w: 0.7071068}
+  m_LocalPosition: {x: -2.1575816, y: 8.223777, z: 0.3141993}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -892,7 +912,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 1627109549}
   - {fileID: 1823677805}
-  - {fileID: 238064300}
   - {fileID: 1227512653}
   - {fileID: 1611452416}
   - {fileID: 657585795}
+  - {fileID: 1078741819}
