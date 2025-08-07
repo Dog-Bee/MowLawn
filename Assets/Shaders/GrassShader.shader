@@ -31,7 +31,9 @@ Shader "Unlit/GrassShader"
         [Space(10)]
         _CutMask("Cut Mask",2D) = "black"{}
         _CutThreshold("Cut Threshold", Range(0,1)) = 0.5
-        
+        _CutMinHeight("Cut Min Height", Range(0,1)) = 0.3
+        _GrassHeight("Grass Height Y",Float) = .33
+
 
     }
     SubShader
@@ -70,6 +72,7 @@ Shader "Unlit/GrassShader"
                 float randomTop : TEXCOORD1;
                 float2 worldUV : TEXCOORD2;
                 float3 worldPos : TEXCOORD3;
+                float baseWorldY : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -79,13 +82,13 @@ Shader "Unlit/GrassShader"
             float _MidColorBorder;
             float _TopColorBorder;
             float _ColorVariation;
-            
+
             float _WindSpeed;
             float _WindFrequency;
 
             float _NoiseAmount;
             float _NoiseFrequency;
-            
+
             float _WindMinY;
             float _WindMaxY;
 
@@ -96,11 +99,11 @@ Shader "Unlit/GrassShader"
 
             TEXTURE2D(_CutMask);
             SAMPLER(sampler_CutMask);
-            
+
             float _CutThreshold;
-            float2 _CutMaskTiling;
-            
-            
+            float _CutMinHeight;
+            float _GrassHeight;
+
 
             float hash21(float2 p)
             {
@@ -120,12 +123,13 @@ Shader "Unlit/GrassShader"
                 float windNormY = saturate(y);
 
                 float3 worldPos = TransformObjectToWorld(IN.positionOS.xyz);
-                
+
                 OUT.worldPos = worldPos;
                 OUT.worldUV = worldPos.xz;
+                OUT.baseWorldY = y;
 
                 float2 uv = worldPos.xz * 0.5;
-                
+
 
                 //---GLOBAL WIND---
                 float wave = sin(_Time.y * _WindFrequency + worldPos.x * 0.5f + worldPos.z * 0.5);
@@ -141,12 +145,11 @@ Shader "Unlit/GrassShader"
                 float2 dir = float2(cos(angle), sin(angle));
 
                 //---RANDOM---
-                float topRand = (hash21(uv+87.42)*2.0-1.0)*_ColorVariation;
-                OUT.randomTop = saturate(_TopColorBorder+topRand);
+                float topRand = (hash21(uv + 87.42) * 2.0 - 1.0) * _ColorVariation;
+                OUT.randomTop = saturate(_TopColorBorder + topRand);
 
                 float2 totalOffset = dir * (globalWindOffset + noiseOffset);
 
-                
 
                 IN.positionOS.xz += totalOffset;
 
@@ -157,30 +160,35 @@ Shader "Unlit/GrassShader"
 
             float4 frag(Varyings IN) :SV_Target
             {
+                //---UV MASK WORLD SPACE---
                 float2 uv;
-                uv.x = (IN.worldUV.x-_SurfaceOriginX)/_SurfaceWidth;
-                uv.y = (IN.worldUV.y-_SurfaceOriginZ)/_SurfaceLength;
-                uv = clamp(uv,0,1);
-                
-                
-                float2 cutUV = uv;
-                float mask = SAMPLE_TEXTURE2D(_CutMask,sampler_CutMask,cutUV).r;
-                clip(mask-_CutThreshold);
+                uv.x = (IN.worldUV.x - _SurfaceOriginX) / _SurfaceWidth;
+                uv.y = (IN.worldUV.y - _SurfaceOriginZ) / _SurfaceLength;
+                uv = clamp(uv, 0, 1);
 
-                
+                float mask = SAMPLE_TEXTURE2D(_CutMask, sampler_CutMask, uv).r;
+
+                float normY = IN.baseWorldY/_GrassHeight;
+
+                if (mask<_CutThreshold)
+                {
+                    clip(_CutMinHeight-normY);
+                }
+
+                //---COLOR INTERPOLATION---
                 float h = IN.height;
                 float mid = _MidColorBorder;
                 float top = IN.randomTop;
-                                
+
                 float4 col;
 
-                if(h<mid)
+                if (h < mid)
                 {
-                    col = lerp(_BotColor,_MidColor,h/max(mid,0.001));
+                    col = lerp(_BotColor, _MidColor, h / max(mid, 0.001));
                 }
                 else
                 {
-                    col = lerp(_MidColor,_TopColor,(h-mid)/max(top-mid,0.001));
+                    col = lerp(_MidColor, _TopColor, (h - mid) / max(top - mid, 0.001));
                 }
 
                 return col;
