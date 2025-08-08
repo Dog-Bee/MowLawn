@@ -175,13 +175,9 @@ Shader "Unlit/GrassShader"
 
                 return lerp(_MidColor, _TopColor, (h - mid) / max(topRand - mid, 0.001));
             }
-            float4 FieldTexColor(float2 worldXZ)
+            float4 FieldTexColor(float2 uv)
             {
-                float2 uv;
-                uv.x = (worldXZ.x-_SurfaceOriginX)/_SurfaceWidth;
-                uv.y = (worldXZ.y-_SurfaceOriginZ)/_SurfaceLength;
-
-                uv=saturate(uv);
+               uv=saturate(uv);
 
                 return SAMPLE_TEXTURE2D(_FieldTex,sampler_FieldTex,uv);
             }
@@ -210,17 +206,13 @@ Shader "Unlit/GrassShader"
 
                 if (hasFieldTex>0.5)
                 {
-                    float4 texCol =FieldTexColor(IN.worldUV);
-                    float useTex = step(_FieldAlphaCutoff,texCol.a);
-                    float3 texRGB = (texCol.a>1e-5)? (texCol.rgb/texCol.a): texCol.rgb;
-                    float3 outRGB = lerp(heightCol.rgb,texRGB,useTex);
+                    float4 texCol =FieldTexColor(uv);
+                    float alpha = texCol.a;
                     
-                    return float4(outRGB,1);
+                    return lerp(heightCol,texCol,alpha);
                 }
-                else
-                {
                     return heightCol;
-                }
+                
             }
             ENDHLSL
         }
