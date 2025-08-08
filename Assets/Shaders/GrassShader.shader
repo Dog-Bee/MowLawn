@@ -9,30 +9,35 @@ Shader "Unlit/GrassShader"
 
         [Space(10)]
         [Header(Color Gradient Range)]
-        [Space(10)]
+        [Space(6)]
         _MidColorBorder ("Middle Color Broder", Range(0,1)) = 0
         _TopColorBorder ("Top Color Border", Range(0,1)) = 1
         _ColorVariation ("Color Height Variation", Range(0,0.5)) = 0.1
 
+        [Space(6)]
+        [Header(Field Texture)]
+        [Space(6)]
+        _FieldTex("Field Texture", 2D) = "white"{}
+        _FieldAlphaCutoff("Field Alpha Cutoff",Range(0,1)) = 0.1
+
         [Space(10)]
         [Header(Wind Settins)]
-        [Space(10)]
+        [Space(6)]
         _WindSpeed("Wind Speed", Range(0,1)) = 0.1
         _WindFrequency("Wind Frequency", Float) = 2
 
         [Space(10)]
         [Header(Noise Settings)]
-        [Space(10)]
+        [Space(6)]
         _NoiseAmount("Noise Amount", Range(0,1)) = 0.05
         _NoiseFrequency("NoiseFrequency",Float) = 2
 
         [Space(10)]
         [Header(Cut Mask Settings)]
-        [Space(10)]
-        _CutMask("Cut Mask",2D) = "black"{}
+        [Space(6)]
         _CutThreshold("Cut Threshold", Range(0,1)) = 0.5
         _CutMinHeight("Cut Min Height", Range(0,1)) = 0.3
-        _GrassHeight("Grass Height Y",Float) = .33
+        _GrassHeight("Grass Height Y",Float) = 0.33
 
 
     }
@@ -82,6 +87,11 @@ Shader "Unlit/GrassShader"
             float _MidColorBorder;
             float _TopColorBorder;
             float _ColorVariation;
+
+            TEXTURE2D (_FieldTex);
+            SAMPLER(sampler_FieldTex);
+            float4 _FieldTex_TexelSize;
+            float _FieldAlphaCutoff;
 
             float _WindSpeed;
             float _WindFrequency;
@@ -158,6 +168,24 @@ Shader "Unlit/GrassShader"
                 return OUT;
             }
 
+            float4 HeightGradientColor(float h, float mid, float topRand)
+            {
+                if (h < mid)
+                    return lerp(_BotColor, _MidColor, h / max(mid, 0.001));
+
+                return lerp(_MidColor, _TopColor, (h - mid) / max(topRand - mid, 0.001));
+            }
+            float4 FieldTexColor(float2 worldXZ)
+            {
+                float2 uv;
+                uv.x = (worldXZ.x-_SurfaceOriginX)/_SurfaceWidth;
+                uv.y = (worldXZ.y-_SurfaceOriginZ)/_SurfaceLength;
+
+                uv=saturate(uv);
+
+                return SAMPLE_TEXTURE2D(_FieldTex,sampler_FieldTex,uv);
+            }
+            
             float4 frag(Varyings IN) :SV_Target
             {
                 //---UV MASK WORLD SPACE---
@@ -168,30 +196,31 @@ Shader "Unlit/GrassShader"
 
                 float mask = SAMPLE_TEXTURE2D(_CutMask, sampler_CutMask, uv).r;
 
-                float normY = IN.baseWorldY/_GrassHeight;
+                float normY = IN.baseWorldY / _GrassHeight;
 
-                if (mask<_CutThreshold)
+                if (mask < _CutThreshold)
                 {
-                    clip(_CutMinHeight-normY);
+                    clip(_CutMinHeight - normY);
                 }
 
                 //---COLOR INTERPOLATION---
-                float h = IN.height;
-                float mid = _MidColorBorder;
-                float top = IN.randomTop;
+                float4 heightCol = HeightGradientColor(IN.height,_MidColorBorder,IN.randomTop);
+                
+                float hasFieldTex = (_FieldTex_TexelSize.z>1.0) && (_FieldTex_TexelSize.w>1.0)?1.0:0.0;
 
-                float4 col;
-
-                if (h < mid)
+                if (hasFieldTex>0.5)
                 {
-                    col = lerp(_BotColor, _MidColor, h / max(mid, 0.001));
+                    float4 texCol =FieldTexColor(IN.worldUV);
+                    float useTex = step(_FieldAlphaCutoff,texCol.a);
+                    float3 texRGB = (texCol.a>1e-5)? (texCol.rgb/texCol.a): texCol.rgb;
+                    float3 outRGB = lerp(heightCol.rgb,texRGB,useTex);
+                    
+                    return float4(outRGB,1);
                 }
                 else
                 {
-                    col = lerp(_MidColor, _TopColor, (h - mid) / max(top - mid, 0.001));
+                    return heightCol;
                 }
-
-                return col;
             }
             ENDHLSL
         }
