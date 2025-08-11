@@ -16,23 +16,32 @@ Shader "Custom/GrassCutter"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-             #pragma multi_compile_instancing
+            #pragma multi_compile_instancing
             #pragma instancing_options assumeuniformscaling
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            
-            float2 _Center;
-            float _Radius;
+
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
 
+            TEXTURE2D(_StampTex);
+            SAMPLER(sampler_StampTex);
+
+            float2 _StampCenterUV;
+
+            float2 _StampAxisU;
+            float2 _StampAxisV;
+
+            float2 _StampSize;
+            float2 _StampInvSizeUV;
+
+            float _Strength;
+            
             struct Attributes
             {
                 float4 positionOS :POSITION;
                 float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
-
-
             };
 
             struct Varyings
@@ -40,8 +49,6 @@ Shader "Custom/GrassCutter"
                 float4 positionHCS :SV_POSITION;
                 float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
-
-
             };
 
             Varyings vert(Attributes IN)
@@ -57,14 +64,25 @@ Shader "Custom/GrassCutter"
             float4 frag(Varyings IN) : SV_Target
             {
                 float2 uv = IN.uv;
-                
-                float dist = distance(uv, _Center);
-                float cutCircle = 1- smoothstep(_Radius *0.8,_Radius,dist);
-                
-                float current = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,uv).r;
-                float newValue = min(current,1-cutCircle);
-                
+
+                float current = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv).r;
+                float2 rel = uv - _StampCenterUV;
+
+                float projU = dot(rel,_StampAxisU) * _StampInvSizeUV.x+0.5;
+                float projV = dot(rel,_StampAxisV) * _StampInvSizeUV.y+0.5;
+                float2 suv = float2(projU,projV);
+
+                float2 inside  = step(0.0,suv) * step(suv,1.0);
+                float insideMask = inside.x * inside.y;
+
+                float4 s = SAMPLE_TEXTURE2D(_StampTex,sampler_StampTex,saturate(suv));
+                float stamp = s.a*insideMask;
+
+                float cut = saturate(stamp*_Strength);
+                float newValue = min(current,1.0-cut);
+
                 return float4(newValue,0,0,1);
+
             }
             ENDHLSL
         }

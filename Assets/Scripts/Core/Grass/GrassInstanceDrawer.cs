@@ -18,6 +18,8 @@ public class GrassInstanceDrawer : MonoBehaviour
     [SerializeField] private MeshFilter surfaceMesh;
 
     [SerializeField] private float pixelPerUnit = 100f;
+    [Range(0,1)][SerializeField] private float defaultStrength = 1.0f;
+    
 
     private List<Matrix4x4> _matrices = new List<Matrix4x4>(1023);
     private const int BATCH_SIZE = 1023;
@@ -33,9 +35,13 @@ public class GrassInstanceDrawer : MonoBehaviour
     
     private Vector3 _surfaceOrigin;
 
-    public Material _runtimeMaterial;
+    private Material _runtimeMaterial;
     private Material _cutterMaterial;
-    public RenderTexture _cutMask;
+
+    private RenderTexture _cutMask;
+    
+    public RenderTexture CutMask=>_cutMask;
+  
 
 
     private void Start()
@@ -110,6 +116,7 @@ public class GrassInstanceDrawer : MonoBehaviour
         _cutterMaterial = new Material(cutterMaterial);
         
         _cutterMaterial.SetTexture("_MainTex",_cutMask);
+        _cutterMaterial.SetFloat("_Strength",defaultStrength);
 
     }
     
@@ -135,7 +142,15 @@ public class GrassInstanceDrawer : MonoBehaviour
         Debug.Log($"Generated {_matrices.Count} grass over {_surfaceWidth}x{_surfaceLength}");
     }
 
-    public void CutAtWorld(Vector3 worldPos, float radius)
+    private Vector2 WorldToUV(Vector3 worldPos)
+    {
+        float u = (worldPos.x - _surfaceOrigin.x)/_surfaceWidth;
+        float v = (worldPos.z - _surfaceOrigin.z)/_surfaceLength;
+        
+        return new Vector2(u, v);
+    }
+
+    public void CutCircleAtWorld(Vector3 worldPos, float radius)
     {
         if (_cutterMaterial == null) return;
         
@@ -147,11 +162,53 @@ public class GrassInstanceDrawer : MonoBehaviour
         _cutterMaterial.SetVector("_Center",uv);
         _cutterMaterial.SetFloat("_Radius", radius/Mathf.Max(_surfaceWidth,_surfaceLength));
         
+        BlitToMask();
+    }
+
+    public void CutAllGrass()
+    {
+        if (_cutMask == null) return;
+        Graphics.Blit(Texture2D.blackTexture, _cutMask);
+    }
+
+    public void RestoreAllGrass()
+    {
+        if (_cutMask == null) return;
+        Graphics.Blit(Texture2D.whiteTexture, _cutMask);
+    }
+
+    public void CutStampWorld(Texture stampTex, Vector3 centerWorld, Vector3 worldSize, float angle, float strength =0)
+    {
+        if(_cutterMaterial == null || stampTex==null) return; 
+        
+        strength = strength is <= 0 or > 1? defaultStrength : strength;
+
+        Vector3 centerUV = WorldToUV(centerWorld);
+        Vector2 sizeUV = new Vector3(worldSize.x / _surfaceWidth, worldSize.y / _surfaceLength);
+        Vector2 invSizeUV = new Vector2(1f/Mathf.Max(sizeUV.x,0),1f/Mathf.Max(sizeUV.y,0));
+        
+        float rad = angle*Mathf.Deg2Rad;
+        Vector2 axisU = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+        Vector2 axisV =  new Vector2(-axisU.y, axisU.x);
+        
+        _cutterMaterial.SetTexture("_StampTex",stampTex);
+        _cutterMaterial.SetVector("_StampCenterUV",centerUV);
+        _cutterMaterial.SetVector("_StampAxisU", axisU);
+        _cutterMaterial.SetVector("_StampAxisV", axisV);
+        _cutterMaterial.SetVector("_StampInvSizeUV", invSizeUV);
+        _cutterMaterial.SetFloat("_StampStrength", Mathf.Clamp01(strength));
+        
+        BlitToMask();
+    }
+
+    private void BlitToMask()
+    {
         RenderTexture temp = RenderTexture.GetTemporary(_cutMask.width, _cutMask.height, 0, _cutMask.format);
         Graphics.Blit(_cutMask,temp);
         _cutterMaterial.SetTexture("_MainTex",temp);
         Graphics.Blit(temp,_cutMask,_cutterMaterial);
         RenderTexture.ReleaseTemporary(temp);
+
     }
     
 }

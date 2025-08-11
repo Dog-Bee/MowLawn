@@ -32,7 +32,7 @@ public class MouseCutter : MonoBehaviour
 
                 if (_currentInstanceDrawer != null)
                 {
-                    _currentInstanceDrawer.CutAtWorld(hit.point,radius);
+                    _currentInstanceDrawer.CutCircleAtWorld(hit.point,radius);
                 }
             }
         }
