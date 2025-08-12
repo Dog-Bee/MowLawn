@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Matrix4x4 = UnityEngine.Matrix4x4;
@@ -41,8 +42,11 @@ public class GrassInstanceDrawer : MonoBehaviour
     private RenderTexture _cutMask;
     
     public RenderTexture CutMask=>_cutMask;
-  
 
+    private void Awake()
+    {
+        Application.targetFrameRate = 30;
+    }
 
     private void Start()
     {
@@ -177,6 +181,56 @@ public class GrassInstanceDrawer : MonoBehaviour
         Graphics.Blit(Texture2D.whiteTexture, _cutMask);
     }
 
+    public void PushGrassFromCenter(Vector3 centerWorld, float radiusWorld)
+    {
+        Vector2 cUV = WorldToUV(centerWorld);
+        
+        float rUV = radiusWorld/Mathf.Max(_surfaceWidth,_surfaceLength);
+
+        _runtimeMaterial.SetVector("_PushCenterUV", cUV);
+        _runtimeMaterial.SetFloat("_PushRadiusUV", rUV);
+
+    }
+
+    public void CutSweepStampWorld(Texture stampTex, Vector3 prevWorld, Vector3 currentWorld, Vector3 worldSize,
+        float strength = 0)
+    {
+        if (_cutterMaterial == null || stampTex == null) return;
+        
+        strength = strength is <= 0 or > 1? defaultStrength : strength;
+        Vector2 a = WorldToUV(prevWorld);
+        Vector2 b = WorldToUV(currentWorld);
+
+        Vector2 ab = b - a;
+        float EPS = 1e-6f;
+        float lenUV = Math.Max(EPS, ab.magnitude);
+        
+        Vector2 axisU = ab / lenUV;
+        Vector2 axisV = new Vector2(-axisU.y, axisU.x);
+        
+        Vector2 sizeUV = new Vector2(worldSize.x / _surfaceWidth, worldSize.y / _surfaceLength);
+        float invV = 1/MathF.Max(EPS, sizeUV.y);
+        
+        float texelUV = Mathf.Max(1/_cutMask.width, 1/_cutMask.height);
+        float pad = texelUV * 2f;
+        Vector2 aPad = a - axisU * pad;
+        Vector2 bPad = b + axisU * pad;
+        float lenPad = lenUV + 2f * pad;
+        Vector2 invSizeUV = new Vector2(1/Mathf.Max(EPS,lenPad),invV);
+        
+        _cutterMaterial.SetFloat("_UseSweep", 1);
+        _cutterMaterial.SetTexture("_StampTex",stampTex);
+        _cutterMaterial.SetVector("_PrevStampCenterUV",aPad);
+        _cutterMaterial.SetVector("_StampCenterUV",bPad);
+        _cutterMaterial.SetVector("_StampAxisU", axisU);
+        _cutterMaterial.SetVector("_StampAxisV", axisV);
+        _cutterMaterial.SetVector("_StampInvSizeUV", invSizeUV);
+        _cutterMaterial.SetFloat("_Strength", Mathf.Clamp01(strength));
+
+        BlitToMask();
+
+    }
+
     public void CutStampWorld(Texture stampTex, Vector3 centerWorld, Vector3 worldSize, float angle, float strength =0)
     {
         if(_cutterMaterial == null || stampTex==null) return; 
@@ -184,19 +238,20 @@ public class GrassInstanceDrawer : MonoBehaviour
         strength = strength is <= 0 or > 1? defaultStrength : strength;
 
         Vector3 centerUV = WorldToUV(centerWorld);
-        Vector2 sizeUV = new Vector3(worldSize.x / _surfaceWidth, worldSize.y / _surfaceLength);
+        Vector2 sizeUV = new Vector2(worldSize.x / _surfaceWidth, worldSize.y / _surfaceLength);
         Vector2 invSizeUV = new Vector2(1f/Mathf.Max(sizeUV.x,0),1f/Mathf.Max(sizeUV.y,0));
         
         float rad = angle*Mathf.Deg2Rad;
         Vector2 axisU = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
         Vector2 axisV =  new Vector2(-axisU.y, axisU.x);
         
+        _cutterMaterial.SetFloat("_UseSweep", 0);
         _cutterMaterial.SetTexture("_StampTex",stampTex);
         _cutterMaterial.SetVector("_StampCenterUV",centerUV);
         _cutterMaterial.SetVector("_StampAxisU", axisU);
         _cutterMaterial.SetVector("_StampAxisV", axisV);
         _cutterMaterial.SetVector("_StampInvSizeUV", invSizeUV);
-        _cutterMaterial.SetFloat("_StampStrength", Mathf.Clamp01(strength));
+        _cutterMaterial.SetFloat("_Strength", Mathf.Clamp01(strength));
         
         BlitToMask();
     }

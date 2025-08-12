@@ -33,6 +33,12 @@ Shader "Unlit/GrassShader"
         _NoiseFrequency("NoiseFrequency",Float) = 2
 
         [Space(10)]
+        [Header(Push Wind Settings)]
+        [Space(6)]
+        _PushWidthUV("Push Width",Range(0,1)) = 0.1
+        _PushAmountWorld("Push Strength", Range(0,1)) = 0.05
+
+        [Space(10)]
         [Header(Cut Mask Settings)]
         [Space(6)]
         _CutThreshold("Cut Threshold", Range(0,1)) = 0.5
@@ -88,7 +94,7 @@ Shader "Unlit/GrassShader"
             float _TopColorBorder;
             float _ColorVariation;
 
-            TEXTURE2D (_FieldTex);
+            TEXTURE2D(_FieldTex);
             SAMPLER(sampler_FieldTex);
             float4 _FieldTex_TexelSize;
             float _FieldAlphaCutoff;
@@ -114,12 +120,49 @@ Shader "Unlit/GrassShader"
             float _CutMinHeight;
             float _GrassHeight;
 
+            float2 _PushCenterUV;
+            float _PushRadiusUV;
+            float _PushWidthUV;
+            float _PushAmountWorld;
+
 
             float hash21(float2 p)
             {
                 p = frac(p * float2(123.34, 456.21));
                 p += dot(p, p + 45.32);
                 return frac(p.x * p.y);
+            }
+
+
+            float2 windOutline(float3 worldPos, float wave, float windNormy, float2 totalOffset)
+            {
+                float2 fieldUV;
+                fieldUV.x = (worldPos.x - _SurfaceOriginX) / _SurfaceWidth;
+                fieldUV.y = (worldPos.z - _SurfaceOriginZ) / _SurfaceLength;
+
+                float2 toC = fieldUV - _PushCenterUV;
+                float d = length(toC);
+
+                float outside = step(_PushRadiusUV, d);
+                float t = saturate((d - _PushRadiusUV) / max(_PushWidthUV, 1e-6));
+                float band = 1.0 - t;
+                band = smoothstep(0.0, 1.0, band) * outside;
+
+                float2 dirUV = (d > 1e-6) ? toC / d : float2(0, 0);
+                float2 radialObj = normalize(float2(dirUV.x * _SurfaceWidth, dirUV.y * _SurfaceLength));
+                float2 tangObj = float2(-radialObj.y, radialObj.x);
+
+                float pushBiasAmt = _PushAmountWorld * band * windNormy;
+                float2 pushBias = radialObj * pushBiasAmt;
+
+                float radialWind = dot(totalOffset, radialObj);
+                float tangWind = dot(totalOffset, tangObj);
+
+                radialWind = max(0.0, radialWind) * band + radialWind * (1.0 - band);
+
+                float2 windRebased = radialObj*radialWind+tangObj*tangWind;
+
+                return pushBias + windRebased;
             }
 
             Varyings vert(Attributes IN)
@@ -160,13 +203,16 @@ Shader "Unlit/GrassShader"
 
                 float2 totalOffset = dir * (globalWindOffset + noiseOffset);
 
+                float2 offsetWorld = windOutline(worldPos, wave, windNormY,totalOffset);
 
-                IN.positionOS.xz += totalOffset;
+
+                IN.positionOS.xz += offsetWorld;
 
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.height = colorNormY;
                 return OUT;
             }
+
 
             float4 HeightGradientColor(float h, float mid, float topRand)
             {
@@ -175,13 +221,14 @@ Shader "Unlit/GrassShader"
 
                 return lerp(_MidColor, _TopColor, (h - mid) / max(topRand - mid, 0.001));
             }
+
             float4 FieldTexColor(float2 uv)
             {
-               uv=saturate(uv);
+                uv = saturate(uv);
 
-                return SAMPLE_TEXTURE2D(_FieldTex,sampler_FieldTex,uv);
+                return SAMPLE_TEXTURE2D(_FieldTex, sampler_FieldTex, uv);
             }
-            
+
             float4 frag(Varyings IN) :SV_Target
             {
                 //---UV MASK WORLD SPACE---
@@ -200,19 +247,18 @@ Shader "Unlit/GrassShader"
                 }
 
                 //---COLOR INTERPOLATION---
-                float4 heightCol = HeightGradientColor(IN.height,_MidColorBorder,IN.randomTop);
-                
-                float hasFieldTex = (_FieldTex_TexelSize.z>1.0) && (_FieldTex_TexelSize.w>1.0)?1.0:0.0;
+                float4 heightCol = HeightGradientColor(IN.height, _MidColorBorder, IN.randomTop);
 
-                if (hasFieldTex>0.5)
+                float hasFieldTex = (_FieldTex_TexelSize.z > 1.0) && (_FieldTex_TexelSize.w > 1.0) ? 1.0 : 0.0;
+
+                if (hasFieldTex > 0.5)
                 {
-                    float4 texCol =FieldTexColor(uv);
+                    float4 texCol = FieldTexColor(uv);
                     float alpha = texCol.a;
-                    
-                    return lerp(heightCol,texCol,alpha);
+
+                    return lerp(heightCol, texCol, alpha);
                 }
-                    return heightCol;
-                
+                return heightCol;
             }
             ENDHLSL
         }

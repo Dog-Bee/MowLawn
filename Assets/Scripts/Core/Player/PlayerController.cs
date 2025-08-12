@@ -54,6 +54,6 @@ public class PlayerController : MonoBehaviour
 
     private void PlayerRotate()
     {
-        _playerTransform.Rotate(Vector3.up * Time.deltaTime * angularSpeed);
+        _playerTransform.Rotate(Vector3.up * Time.unscaledDeltaTime * angularSpeed);
     }
 }
