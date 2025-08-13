@@ -943,7 +943,7 @@ MonoBehaviour:
   angleOffsetDeg: 0
   strength: 1
   _cutSweep: 0
-  pushRadius: 0.66
+  pushRadius: 0.39
 --- !u!1001 &1303151391
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1250,10 +1250,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74fc0abc2f14c184b929a975f38bc1d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grassMesh: {fileID: 4300000, guid: 90132ce4337043e4fafea37b7e55127f, type: 2}
+  grassMesh: {fileID: 4300000, guid: fd38f92127c529e47a5244bb4e619ad2, type: 2}
   grassMaterial: {fileID: 2100000, guid: c283346b2acdf524f8b25a7f12fafa9c, type: 2}
   cutterMaterial: {fileID: 2100000, guid: 65b9eb58254d0fd40a00f06e4e6946b4, type: 2}
-  instanceCount: 400
+  instanceCount: 100
   surfaceMesh: {fileID: 1492826769}
   pixelPerUnit: 100
   defaultStrength: 1

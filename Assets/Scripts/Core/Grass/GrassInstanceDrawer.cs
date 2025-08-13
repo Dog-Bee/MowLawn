@@ -45,7 +45,7 @@ public class GrassInstanceDrawer : MonoBehaviour
 
     private void Awake()
     {
-        Application.targetFrameRate = 30;
+        Application.targetFrameRate = -1;
     }
 
     private void Start()
